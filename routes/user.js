@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const {verifyToken, verifyTokenAndAuthorization} = require('./verifyToken');
+const {verifyToken, verifyTokenAndAuthorization, verifyTokenAndAdmin} = require('./verifyToken');
 const {passEncrypt} = require('../config/cryptojsfun');
 const User = require('../models/User');
 
@@ -32,13 +32,58 @@ router.delete('/:id', verifyTokenAndAuthorization , async(req, res)=>{
      }
 })
 
-router.get('/:id', verifyTokenAndAdmin , async(req, res)=>{
+router.get('/find/:id', verifyTokenAndAdmin , async(req, res)=>{
      try {
           const user = await User.findById(req.params.id);
+          const {password, ...others} = user._doc;
+
+          res.status(200).json(others);
+     } catch (error) {
+          res.status(500).json(error);
+     }
+})
+
+//get all the users
+
+router.get('/', verifyTokenAndAdmin, async (req, res)=>{
+     try {
+          const query = req.query.lim;
+
+          const user = query ? await User.find().sort({_id: -1}).limit(query) : await User.find();
           res.status(200).json(user);
      } catch (error) {
           res.status(500).json(error);
      }
 })
+
+//Get user stats
+
+router.get('/stats', verifyTokenAndAdmin, async (req, res)=>{
+     const date = new Date();
+     const lastYear = new Date(date.setFullYear(date.getFullYear() - 1));
+     console.log(lastYear);
+
+     try {
+
+          const data = await User.aggregate([
+               {$match: {createdAt :{ $gte : lastYear}}},
+               {$project: {
+                    month:{$month : "$createdAt"},
+               }},
+               {
+                    $group: {
+                         _id:'$month',
+                         total:{$sum: 1}
+                    }
+               }
+
+          ]);
+
+          res.status(200).json(data);
+          
+     } catch (err) {
+          res.status(500).json(err);
+     }
+});
 
 module.exports = router;
