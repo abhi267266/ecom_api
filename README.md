@@ -45,7 +45,3 @@
     "price": 99.99
   }
   </pre>
-
-  <h2>Models</h2>
-
-  <p>User, Product, Order models...</p>
